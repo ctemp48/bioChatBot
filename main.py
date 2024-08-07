@@ -3,10 +3,7 @@ from langchain_community.document_loaders import TextLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEndpoint
-from langchain.prompts.prompt import PromptTemplate
 from dotenv import load_dotenv
-from langchain.schema.runnable import RunnablePassthrough
-from langchain.schema.output_parser import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -51,7 +48,7 @@ class Chatbot():
     )
 
     qa_system_prompt = """
-     You are answering questions about a person named Christian. Use the provided 
+    You are answering questions about a person named Christian. Use the provided 
     context to answer these questions. If the context does not provide an answer, just 
     say that you do not know. Do not answer any questions that are not relevant to Christian.
     {context}
