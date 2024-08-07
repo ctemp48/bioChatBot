@@ -1,11 +1,11 @@
-from main import Chatbot
+from main import ChatBot
 import streamlit as st
 import uuid
 
 
-bot = Chatbot()
-session_id = uuid.uuid4
-
+bot = ChatBot()
+session_id = uuid.uuid4()
+print(str(session_id))
 st.set_page_config(page_title="Ask About Christian Templin")
 with st.sidebar:
     st.title('Ask About Christian Templin')
@@ -14,7 +14,7 @@ def generate_response(input):
     result = bot.conversational_rag_chain.invoke(
         {"input": input},
         config={
-            "configurable": {"session_id": str(session_id)}
+            "configurable": {"session_id": "1"}
         },  
     )
     return result["answer"]

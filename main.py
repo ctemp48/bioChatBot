@@ -1,35 +1,31 @@
-from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.document_loaders import TextLoader
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEndpoint
-from dotenv import load_dotenv
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_chroma import Chroma
 from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_community.document_loaders import TextLoader
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
+from dotenv import load_dotenv
 import os
-
-class Chatbot():
+class ChatBot():
     load_dotenv()
-    loader = TextLoader('./biography.txt')
-    documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=4)
-    docs = text_splitter.split_documents(documents)
+    llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0, api_key=os.getenv('OPENAI_API_KEY'))
 
+
+    ### Construct retriever ###
+    loader = TextLoader("./biography.txt")
+    docs = loader.load()
+
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    splits = text_splitter.split_documents(docs)
     embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    vectorstore = Chroma.from_documents(documents=splits, embedding=embedding_function)
+    retriever = vectorstore.as_retriever()
 
-    db = Chroma.from_documents(docs, embedding_function)
-
-    repo_id = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-
-    llm = HuggingFaceEndpoint(repo_id=repo_id, 
-                        temperature=0.1,
-                        top_k=50, 
-                        huggingfacehub_api_token=os.getenv('HUGGINGFACE_ACCESS_TOKEN'))
-    
 
     ### Contextualize question ###
     contextualize_q_system_prompt = """Given a chat history and the latest user question \
@@ -44,15 +40,16 @@ class Chatbot():
         ]
     )
     history_aware_retriever = create_history_aware_retriever(
-        llm, db.as_retriever(), contextualize_q_prompt
+        llm, retriever, contextualize_q_prompt
     )
 
-    qa_system_prompt = """
-    You are answering questions about a person named Christian. Use the provided 
+
+    ### Answer question ###
+    qa_system_prompt = """ You are answering questions about a person named Christian. Use the provided 
     context to answer these questions. If the context does not provide an answer, just 
     say that you do not know. Do not answer any questions that are not relevant to Christian.
-    {context}
-    """
+
+    {context}"""
     qa_prompt = ChatPromptTemplate.from_messages(
         [
             ("system", qa_system_prompt),
@@ -64,14 +61,17 @@ class Chatbot():
 
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
+
+    ### Statefully manage chat history ###
     store = {}
 
-    
+
     def get_session_history(session_id: str, store=store) -> BaseChatMessageHistory:
         if session_id not in store:
             store[session_id] = ChatMessageHistory()
         return store[session_id]
-    
+
+
     conversational_rag_chain = RunnableWithMessageHistory(
         rag_chain,
         get_session_history,
@@ -80,22 +80,17 @@ class Chatbot():
         output_messages_key="answer",
     )
 
+    
+"""
+bot = ChatBot()
 
-
-bot = Chatbot()
-
-result = bot.conversational_rag_chain.invoke(
-    {"input": "What is Christian's favorite color?"},
-    config={
-        "configurable": {"session_id": "abc123"}
-    },  # constructs a key "abc123" in `store`.
-)
-print(result["answer"])
-
-result = bot.conversational_rag_chain.invoke(
-    {"input": "What is the color that you just said?"},
-    config={
-        "configurable": {"session_id": "abc123"}
-    },  # constructs a key "abc123" in `store`.
-)
-print(result["answer"])
+while True:
+    x = input("ask a question")
+    result = bot.conversational_rag_chain.invoke(
+        {"input": x},
+        config={
+            "configurable": {"session_id": "68347"}
+        },  # constructs a key "abc123" in `store`.
+    )
+    print(result["answer"])
+    """
