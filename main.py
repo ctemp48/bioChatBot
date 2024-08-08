@@ -12,12 +12,12 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from dotenv import load_dotenv
 import os
 class ChatBot():
+
     load_dotenv()
     llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0, api_key=os.getenv('OPENAI_API_KEY'))
 
-
     ### Construct retriever ###
-    loader = TextLoader("./biography.txt")
+    loader = TextLoader("./biography.txt", encoding='utf-8')
     docs = loader.load()
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
@@ -25,7 +25,6 @@ class ChatBot():
     embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     vectorstore = Chroma.from_documents(documents=splits, embedding=embedding_function)
     retriever = vectorstore.as_retriever()
-
 
     ### Contextualize question ###
     contextualize_q_system_prompt = """Given a chat history and the latest user question \
@@ -43,11 +42,11 @@ class ChatBot():
         llm, retriever, contextualize_q_prompt
     )
 
-
     ### Answer question ###
     qa_system_prompt = """ You are answering questions about a person named Christian. Use the provided 
     context to answer these questions. If the context does not provide an answer, just 
-    say that you do not know. Do not answer any questions that are not relevant to Christian.
+    say that Christian did not provide you with the necessary information to answer that question.
+    Do not answer any questions that are not relevant to Christian.
 
     {context}"""
     qa_prompt = ChatPromptTemplate.from_messages(
@@ -61,16 +60,13 @@ class ChatBot():
 
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
-
     ### Statefully manage chat history ###
     store = {}
-
 
     def get_session_history(session_id: str, store=store) -> BaseChatMessageHistory:
         if session_id not in store:
             store[session_id] = ChatMessageHistory()
         return store[session_id]
-
 
     conversational_rag_chain = RunnableWithMessageHistory(
         rag_chain,
@@ -80,7 +76,7 @@ class ChatBot():
         output_messages_key="answer",
     )
 
-    
+
 """
 bot = ChatBot()
 
