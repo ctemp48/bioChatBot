@@ -4,8 +4,9 @@ import uuid
 
 
 bot = ChatBot()
-session_id = uuid.uuid4()
-print(str(session_id))
+if 'id' not in st.session_state:
+    st.session_state['id'] = str(uuid.uuid4())
+
 st.set_page_config(page_title="Ask About Christian Templin")
 
 st.title('Ask About Christian Templin')
@@ -14,7 +15,7 @@ def generate_response(input):
     result = bot.conversational_rag_chain.invoke(
         {"input": input},
         config={
-            "configurable": {"session_id": "1"}
+            "configurable": {"session_id": st.session_state['id']}
         },  
     )
     return result["answer"]
