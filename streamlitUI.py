@@ -1,9 +1,6 @@
 from main import ChatBot
 import streamlit as st
 import uuid
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 bot = ChatBot()
 if 'id' not in st.session_state:
