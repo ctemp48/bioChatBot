@@ -18,13 +18,17 @@ import os
 
 class ChatBot():
 
+    #load env variables
     load_dotenv()
+    #get gpt 3.5 turbo model
     llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0, api_key=os.getenv('OPENAI_API_KEY'))
 
     ### Construct retriever ###
     loader = TextLoader("./biography.txt", encoding='utf-8')
     docs = loader.load()
 
+    #split loaded document into chunks, create embeddings using huggingface
+    #and load the embeddings into the chroma db
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     splits = text_splitter.split_documents(docs)
     embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
