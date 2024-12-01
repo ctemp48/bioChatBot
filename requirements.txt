@@ -7,4 +7,3 @@ langchain_text_splitters
 langchain_huggingface
 python-dotenv
 uuid
-pysqlite3-binary
